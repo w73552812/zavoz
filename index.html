@@ -332,7 +332,7 @@ input[type=file]{display:none;}
       <svg class="search-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input class="search-input" placeholder="Поиск людей, каналов, сообществ..." oninput="handleSearch(this.value)">
     </div>
-    <div class="topnav">
+    <div class="topnav" style="display:none">
       <button class="tnav-btn active" id="tnav-feed" onclick="nav('feed')">Лента</button>
       <button class="tnav-btn" id="tnav-channels" onclick="nav('channels')">Каналы</button>
       <button class="tnav-btn" id="tnav-communities" onclick="nav('communities')">Сообщества</button>
@@ -364,12 +364,7 @@ input[type=file]{display:none;}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Профиль
       </button>
-      <div class="sb-section">Мои каналы</div>
-      <div id="myChannelsList"></div>
-      <button class="sb-btn" onclick="openCreateChannel()" style="color:var(--accent2);margin-top:4px;">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Создать канал
-      </button>
+      <div id="myChannelsList" style="display:none"></div>
     </div>
 
     <div class="main-content">
@@ -452,8 +447,14 @@ input[type=file]{display:none;}
           <div class="profile-cover-area" id="profileCoverArea"></div>
           <div class="profile-info-card">
             <div class="profile-ava-row">
-              <img class="profile-big-ava" id="profileBigAva" src="" alt="" style="display:none">
-              <div class="profile-big-ava-text" id="profileBigAvaText" style="background:#6c63ff22;color:var(--accent2)">?</div>
+              <div style="position:relative;display:inline-block;cursor:pointer;" onclick="document.getElementById('profileAvaInput').click()" title="Изменить фото">
+                <img class="profile-big-ava" id="profileBigAva" src="" alt="" style="display:none">
+                <div class="profile-big-ava-text" id="profileBigAvaText" style="background:#6c63ff22;color:var(--accent2)">?</div>
+                <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg2);">
+                  <svg width="10" height="10" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <input type="file" id="profileAvaInput" accept="image/*" onchange="handleProfileAva(event)" style="display:none">
+              </div>
               <button class="edit-profile-btn" onclick="openEditProfile()">Редактировать</button>
             </div>
             <div class="profile-name" id="profileName">—</div>
@@ -465,12 +466,33 @@ input[type=file]{display:none;}
               <div class="pstat"><span class="n" id="statFollowing">0</span> <span class="l">подписок</span></div>
             </div>
           </div>
+          <!-- Composer in profile -->
+          <div class="composer" id="profileComposer" style="margin-bottom:16px;">
+            <div class="composer-top">
+              <img class="ava" id="profileComposerAva" width="38" height="38" src="" style="display:none">
+              <div class="ava-text" id="profileComposerAvaText" style="width:38px;height:38px;font-size:15px;background:#6c63ff22;color:var(--accent2)">?</div>
+              <div class="composer-body">
+                <textarea class="composer-textarea" id="profilePostText" placeholder="Поделитесь чем-нибудь..." rows="2" oninput="autoResize(this);document.getElementById('profilePostBtn').disabled=!this.value.trim()&&!profilePhotoData;"></textarea>
+                <div id="profileImgPreview" class="composer-preview" style="display:none">
+                  <img id="profileImgPreviewImg" src="" alt="">
+                  <button class="remove-img" onclick="clearProfileImg()">✕</button>
+                </div>
+              </div>
+            </div>
+            <div class="composer-footer">
+              <input type="file" id="profilePhotoInput" accept="image/*" onchange="handleProfilePhoto(event)">
+              <button class="tool-btn" onclick="document.getElementById('profilePhotoInput').click()" title="Прикрепить фото">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </button>
+              <button class="post-submit" id="profilePostBtn" onclick="submitProfilePost()" disabled>Опубликовать</button>
+            </div>
+          </div>
           <div id="profilePosts"></div>
         </div>
       </div>
     </div>
 
-    <div class="right-panel" id="rightPanelEl">
+    <div class="right-panel" id="rightPanelEl" style="display:none">
       <div class="rp-section">
         <div class="rp-title">Онлайн</div>
         <div id="onlineList"><div style="font-size:13px;color:var(--text3)">Только вы</div></div>
@@ -514,9 +536,21 @@ input[type=file]{display:none;}
 <div class="overlay" id="editProfileModal">
   <div class="modal">
     <div class="modal-title">Редактировать профиль</div>
+    <div class="field">
+      <label>Фото профиля</label>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:4px;">
+        <img id="epAvaPreview" src="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;display:none;border:2px solid var(--border2)">
+        <div id="epAvaText" style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;background:#6c63ff22;color:var(--accent2)">?</div>
+        <div>
+          <input type="file" id="epAvaInput" accept="image/*" onchange="handleEpAva(event)" style="display:none">
+          <button class="btn-secondary" onclick="document.getElementById('epAvaInput').click()" style="margin-bottom:4px;">Загрузить фото</button>
+          <div style="font-size:11px;color:var(--text3)">JPG, PNG до 5MB</div>
+        </div>
+      </div>
+    </div>
     <div class="field"><label>Имя</label><input type="text" id="epName" placeholder="Ваше имя"></div>
+    <div class="field"><label>Юзернейм</label><input type="text" id="epUsername" placeholder="username" style="font-family:monospace"></div>
     <div class="field"><label>О себе</label><textarea id="epBio" placeholder="Расскажите о себе..."></textarea></div>
-    <div class="field"><label>Сайт</label><input type="text" id="epSite" placeholder="https://"></div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal('editProfileModal')">Отмена</button>
       <button class="btn-sm" onclick="saveProfile()">Сохранить</button>
@@ -549,6 +583,56 @@ input[type=file]{display:none;}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- GOOGLE PROFILE SETUP MODAL -->
+<div class="overlay" id="googleProfileModal">
+  <div class="modal">
+    <div class="modal-title">Настройте ваш профиль</div>
+    <div class="modal-sub">Добро пожаловать! Заполните профиль перед началом.</div>
+    <div class="field">
+      <label>Фото профиля</label>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:4px;">
+        <img id="gpAvaPreview" src="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;display:none;border:2px solid var(--border2)">
+        <div id="gpAvaText" style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;background:#6c63ff22;color:var(--accent2)">?</div>
+        <div>
+          <input type="file" id="gpAvaInput" accept="image/*" onchange="handleGpAva(event)" style="display:none">
+          <button class="btn-secondary" onclick="document.getElementById('gpAvaInput').click()" style="margin-bottom:4px;">Загрузить фото</button>
+          <div style="font-size:11px;color:var(--text3)">JPG, PNG до 5MB</div>
+        </div>
+      </div>
+    </div>
+    <div class="field"><label>Имя</label><input type="text" id="gpName" placeholder="Ваше имя"></div>
+    <div class="field"><label>Юзернейм</label><input type="text" id="gpUsername" placeholder="username" style="font-family:monospace"></div>
+    <div class="field"><label>О себе</label><textarea id="gpBio" placeholder="Расскажите о себе..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-sm" onclick="saveGoogleProfile()">Сохранить и начать</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER PROFILE VIEW MODAL -->
+<div class="overlay" id="userProfileModal">
+  <div class="modal" style="width:520px;padding:0;overflow:hidden;border-radius:var(--radius-lg);">
+    <div style="height:100px;background:linear-gradient(135deg,#1a1640,#2d2060,#6c63ff44);position:relative;">
+      <button onclick="closeModal('userProfileModal')" style="position:absolute;top:10px;right:12px;background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+    <div style="padding:0 20px 20px;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:-36px;margin-bottom:12px;">
+        <img id="upModalAva" src="" style="width:72px;height:72px;border-radius:50%;border:3px solid var(--bg2);object-fit:cover;display:none">
+        <div id="upModalAvaText" style="width:72px;height:72px;border-radius:50%;border:3px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;background:#6c63ff22;color:var(--accent2)">?</div>
+        <button class="btn-sm" id="upModalMsgBtn" onclick="msgUserFromModal()">Написать</button>
+      </div>
+      <div style="font-size:18px;font-weight:700;" id="upModalName">—</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:6px;" id="upModalHandle">@—</div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:12px;" id="upModalBio"></div>
+      <div style="display:flex;gap:20px;font-size:13px;margin-bottom:16px;">
+        <div class="pstat"><span class="n" id="upModalPosts">0</span> <span class="l">постов</span></div>
+        <div class="pstat"><span class="n" id="upModalFollowers">0</span> <span class="l">подписчиков</span></div>
+      </div>
+      <div id="upModalPosts2" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ===== FIREBASE CONFIG (замените своими данными) =====
@@ -626,12 +710,22 @@ function saveLocal() {
 function setupAuthListener() {
   auth.onAuthStateChanged(user => {
     if (user) {
-      currentUser = { uid: user.uid, name: user.displayName || user.email.split('@')[0], email: user.email, photo: user.photoURL };
       const saved = localUsers[user.uid] || {};
+      const isNew = !saved.uid;
+      currentUser = { uid: user.uid, name: user.displayName || user.email.split('@')[0], email: user.email, photo: user.photoURL };
       currentUser = { ...currentUser, ...saved, uid: user.uid };
-      localUsers[user.uid] = currentUser;
-      saveLocal();
-      showApp();
+      // If google sign in and no username set yet, show profile setup
+      if (user.providerData[0]?.providerId === 'google.com' && !saved.usernameSet) {
+        currentUser.photo = saved.photo || user.photoURL;
+        localUsers[user.uid] = currentUser;
+        saveLocal();
+        showApp();
+        openGoogleProfileSetup();
+      } else {
+        localUsers[user.uid] = currentUser;
+        saveLocal();
+        showApp();
+      }
     } else {
       showAuth();
     }
@@ -767,7 +861,6 @@ function nav(page) {
   const sb = document.getElementById('sb-'+page);
   if(tb) tb.classList.add('active');
   if(sb) sb.classList.add('active');
-  document.getElementById('rightPanelEl').style.display = page==='messages' ? 'none' : 'block';
   if(page==='profile') renderProfile();
   if(page==='communities') renderCommunities();
   if(page==='messages') renderConvList();
@@ -781,6 +874,15 @@ function renderFeed() {
   el.innerHTML = posts.map(p => renderPostCard(p)).join('');
 }
 
+function countAllComments(comments) {
+  let count = 0;
+  for(const c of (comments||[])) {
+    count++;
+    count += countAllComments(c.replies||[]);
+  }
+  return count;
+}
+
 function renderPostCard(p) {
   const isMe = currentUser && p.authorId === currentUser.uid;
   const liked = currentUser && p.likes && p.likes.includes(currentUser.uid);
@@ -790,12 +892,15 @@ function renderPostCard(p) {
   const reactionHTML = Object.entries(reactions).map(([emoji, users]) =>
     `<span class="reaction-chip ${users.includes(currentUser?.uid)?'mine':''}" onclick="reactPost('${p.id}','${emoji}')">${emoji} <span>${users.length}</span></span>`
   ).join('');
+  const totalComments = countAllComments(p.comments||[]);
 
   return `<div class="post-card post-relative" id="pcard_${p.id}">
     <div class="post-header">
-      ${p.authorPhoto ? `<img src="${p.authorPhoto}" class="ava" width="38" height="38">` : `<div class="ava-text" style="width:38px;height:38px;font-size:14px;background:${color}22;color:${color}">${initials(p.authorName)}</div>`}
+      <div style="cursor:pointer;" onclick="openUserProfile('${p.authorId}')">
+        ${p.authorPhoto ? `<img src="${p.authorPhoto}" class="ava" width="38" height="38">` : `<div class="ava-text" style="width:38px;height:38px;font-size:14px;background:${color}22;color:${color}">${initials(p.authorName)}</div>`}
+      </div>
       <div class="post-meta">
-        <div class="post-author">${p.authorName}</div>
+        <div class="post-author" onclick="openUserProfile('${p.authorId}')">${p.authorName}</div>
         <div class="post-info">${timeAgo(p.ts)}${p.channelName ? ` · в #${p.channelName}` : ''}</div>
       </div>
       ${isMe ? `<button onclick="deletePost('${p.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;font-size:18px;line-height:1;" title="Удалить">×</button>` : ''}
@@ -810,7 +915,7 @@ function renderPostCard(p) {
       </button>
       <button class="pa-btn" onclick="toggleComments('${p.id}')">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        ${(p.comments||[]).length}
+        ${totalComments}
       </button>
       <div style="position:relative;">
         <button class="pa-btn" onclick="toggleReactPicker(event,'rp_${p.id}')">
@@ -1303,30 +1408,59 @@ function renderProfile() {
   if(currentUser.photo) { pa.src=currentUser.photo; pa.style.display='block'; pat.style.display='none'; }
   else { pa.style.display='none'; pat.style.display='flex'; pat.textContent=initials(currentUser.name); pat.style.background=colorFor(currentUser.uid)+'22'; pat.style.color=colorFor(currentUser.uid); }
   document.getElementById('profileName').textContent = currentUser.name;
-  document.getElementById('profileHandle').textContent = '@'+(currentUser.name||'').toLowerCase().replace(/\s/g,'_');
+  const handle = currentUser.username || (currentUser.name||'').toLowerCase().replace(/\s/g,'_');
+  document.getElementById('profileHandle').textContent = '@'+handle;
   document.getElementById('profileBioText').textContent = currentUser.bio||'';
   const myPosts = localPosts.filter(p=>p.authorId===currentUser.uid);
   document.getElementById('statPosts').textContent = myPosts.length;
   document.getElementById('statFollowers').textContent = currentUser.followers||0;
   document.getElementById('statFollowing').textContent = currentUser.following||0;
   document.getElementById('profilePosts').innerHTML = myPosts.sort((a,b)=>b.ts-a.ts).map(p=>renderPostCard(p)).join('') || '<div class="empty-state"><div class="icon">📝</div><p>Нет постов</p></div>';
+  // Setup profile composer avatar
+  const pca = document.getElementById('profileComposerAva');
+  const pcat = document.getElementById('profileComposerAvaText');
+  if(currentUser.photo) { pca.src=currentUser.photo; pca.style.display='block'; pcat.style.display='none'; }
+  else { pca.style.display='none'; pcat.style.display='flex'; pcat.textContent=initials(currentUser.name); }
 }
 
 function openEditProfile() {
   document.getElementById('epName').value = currentUser.name||'';
+  document.getElementById('epUsername').value = currentUser.username||'';
   document.getElementById('epBio').value = currentUser.bio||'';
-  document.getElementById('epSite').value = currentUser.site||'';
+  // Show avatar preview
+  const avaPreview = document.getElementById('epAvaPreview');
+  const avaText = document.getElementById('epAvaText');
+  if(currentUser.photo) {
+    avaPreview.src = currentUser.photo; avaPreview.style.display='block'; avaText.style.display='none';
+  } else {
+    avaPreview.style.display='none'; avaText.style.display='flex';
+    avaText.textContent = initials(currentUser.name);
+  }
+  window._epNewPhoto = null;
   document.getElementById('editProfileModal').classList.add('show');
 }
 
+function handleEpAva(e) {
+  const file = e.target.files[0]; if(!file) return;
+  uploadPhoto(file, data => {
+    window._epNewPhoto = data;
+    document.getElementById('epAvaPreview').src = data;
+    document.getElementById('epAvaPreview').style.display = 'block';
+    document.getElementById('epAvaText').style.display = 'none';
+  });
+}
+
 function saveProfile() {
-  currentUser.name = document.getElementById('epName').value.trim()||currentUser.name;
+  const newName = document.getElementById('epName').value.trim()||currentUser.name;
+  const newUsername = document.getElementById('epUsername').value.trim().replace(/[^a-zA-Z0-9_]/g,'');
+  currentUser.name = newName;
+  currentUser.username = newUsername || currentUser.username;
   currentUser.bio = document.getElementById('epBio').value.trim();
-  currentUser.site = document.getElementById('epSite').value.trim();
+  if(window._epNewPhoto) currentUser.photo = window._epNewPhoto;
   localUsers[currentUser.uid] = currentUser;
   saveLocal();
   closeModal('editProfileModal');
-  updateTopUser(); renderProfile();
+  updateTopUser(); renderProfile(); setupComposer();
   showToast('Профиль сохранён!');
 }
 
@@ -1348,6 +1482,131 @@ function handleSearch(q) {
   if(!el) return;
   nav('feed');
   el.innerHTML = results.length ? results.map(p=>renderPostCard(p)).join('') : `<div class="empty-state"><div class="icon">🔍</div><p>Ничего не найдено по «${q}»</p></div>`;
+}
+
+// ===== GOOGLE PROFILE SETUP =====
+let _gpNewPhoto = null;
+function openGoogleProfileSetup() {
+  const gpName = document.getElementById('gpName');
+  const gpAvaPreview = document.getElementById('gpAvaPreview');
+  const gpAvaText = document.getElementById('gpAvaText');
+  gpName.value = currentUser.name||'';
+  document.getElementById('gpUsername').value = '';
+  document.getElementById('gpBio').value = '';
+  _gpNewPhoto = null;
+  if(currentUser.photo) {
+    gpAvaPreview.src = currentUser.photo; gpAvaPreview.style.display='block'; gpAvaText.style.display='none';
+  } else {
+    gpAvaPreview.style.display='none'; gpAvaText.style.display='flex';
+    gpAvaText.textContent = initials(currentUser.name);
+  }
+  document.getElementById('googleProfileModal').classList.add('show');
+}
+
+function handleGpAva(e) {
+  const file = e.target.files[0]; if(!file) return;
+  uploadPhoto(file, data => {
+    _gpNewPhoto = data;
+    document.getElementById('gpAvaPreview').src = data;
+    document.getElementById('gpAvaPreview').style.display = 'block';
+    document.getElementById('gpAvaText').style.display = 'none';
+  });
+}
+
+function saveGoogleProfile() {
+  const name = document.getElementById('gpName').value.trim();
+  const username = document.getElementById('gpUsername').value.trim().replace(/[^a-zA-Z0-9_]/g,'');
+  const bio = document.getElementById('gpBio').value.trim();
+  if(!name) { showToast('Введите имя'); return; }
+  currentUser.name = name;
+  if(username) currentUser.username = username;
+  currentUser.bio = bio;
+  currentUser.usernameSet = true;
+  if(_gpNewPhoto) currentUser.photo = _gpNewPhoto;
+  localUsers[currentUser.uid] = currentUser;
+  saveLocal();
+  closeModal('googleProfileModal');
+  updateTopUser(); renderProfile(); setupComposer();
+  showToast('Профиль настроен!');
+}
+
+// ===== PROFILE AVATAR UPLOAD =====
+function handleProfileAva(e) {
+  const file = e.target.files[0]; if(!file) return;
+  uploadPhoto(file, data => {
+    currentUser.photo = data;
+    localUsers[currentUser.uid] = currentUser;
+    saveLocal();
+    renderProfile(); updateTopUser(); setupComposer();
+    showToast('Фото обновлено!');
+  });
+}
+
+// ===== PROFILE COMPOSER =====
+let profilePhotoData = null;
+function handleProfilePhoto(e) {
+  const file = e.target.files[0]; if(!file) return;
+  uploadPhoto(file, data => {
+    profilePhotoData = data;
+    document.getElementById('profileImgPreviewImg').src = data;
+    document.getElementById('profileImgPreview').style.display = 'inline-block';
+    document.getElementById('profilePostBtn').disabled = false;
+  });
+}
+function clearProfileImg() {
+  profilePhotoData = null;
+  document.getElementById('profileImgPreview').style.display = 'none';
+  document.getElementById('profileImgPreviewImg').src = '';
+  document.getElementById('profilePhotoInput').value = '';
+  if(!document.getElementById('profilePostText').value.trim()) document.getElementById('profilePostBtn').disabled = true;
+}
+function submitProfilePost() {
+  const text = document.getElementById('profilePostText').value.trim();
+  if(!text && !profilePhotoData) return;
+  const post = {
+    id: uid(), authorId: currentUser.uid, authorName: currentUser.name,
+    authorPhoto: currentUser.photo||null, text, img: profilePhotoData||null,
+    ts: Date.now(), likes:[], comments:[], reactions:{}, showComments:false
+  };
+  localPosts.unshift(post);
+  document.getElementById('profilePostText').value = '';
+  clearProfileImg();
+  document.getElementById('profilePostBtn').disabled = true;
+  saveLocal(); renderFeed(); renderProfile();
+  showToast('Пост опубликован!');
+}
+
+// ===== OPEN USER PROFILE (from feed) =====
+let _modalUserId = null;
+function openUserProfile(uid_) {
+  if(currentUser && uid_ === currentUser.uid) { nav('profile'); return; }
+  _modalUserId = uid_;
+  const user = localUsers[uid_] || { uid: uid_, name: 'Пользователь', photo: null };
+  const color = colorFor(uid_);
+  const ava = document.getElementById('upModalAva');
+  const avaText = document.getElementById('upModalAvaText');
+  if(user.photo) { ava.src=user.photo; ava.style.display='block'; avaText.style.display='none'; }
+  else { ava.style.display='none'; avaText.style.display='flex'; avaText.textContent=initials(user.name); avaText.style.background=color+'22'; avaText.style.color=color; }
+  document.getElementById('upModalName').textContent = user.name;
+  const handle = user.username || (user.name||'').toLowerCase().replace(/\s/g,'_');
+  document.getElementById('upModalHandle').textContent = '@'+handle;
+  document.getElementById('upModalBio').textContent = user.bio||'';
+  const userPosts = localPosts.filter(p=>p.authorId===uid_);
+  document.getElementById('upModalPosts').textContent = userPosts.length;
+  document.getElementById('upModalFollowers').textContent = user.followers||0;
+  document.getElementById('upModalPosts2').innerHTML = userPosts.sort((a,b)=>b.ts-a.ts).slice(0,5).map(p=>`
+    <div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);">${escHtml(p.text||'')}${p.img?`<img src="${p.img}" style="max-width:100%;border-radius:8px;margin-top:6px;display:block;">`:''}</div>
+  `).join('') || '<div style="font-size:13px;color:var(--text3);padding:10px 0;">Нет постов</div>';
+  document.getElementById('userProfileModal').classList.add('show');
+}
+
+function msgUserFromModal() {
+  if(!_modalUserId) return;
+  closeModal('userProfileModal');
+  const key = [currentUser.uid, _modalUserId].sort().join('_');
+  if(!localMessages[key]) { localMessages[key]=[]; saveLocal(); }
+  nav('messages');
+  openConv(key);
 }
 
 // ===== MODAL HELPERS =====
