@@ -635,14 +635,15 @@ input[type=file]{display:none;}
 </div>
 
 <script>
-// ===== FIREBASE CONFIG (замените своими данными) =====
+// ===== FIREBASE CONFIG =====
 const FIREBASE_CONFIG = {
-  // apiKey: "YOUR_API_KEY",
-  // authDomain: "YOUR_PROJECT.firebaseapp.com",
-  // projectId: "YOUR_PROJECT_ID",
-  // storageBucket: "YOUR_PROJECT.appspot.com",
-  // messagingSenderId: "YOUR_ID",
-  // appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAisUhFvXK_pCOsuCSFCk9bphI4DyPfT60",
+  authDomain: "sasasasasa-c1a30.firebaseapp.com",
+  projectId: "sasasasasa-c1a30",
+  storageBucket: "sasasasasa-c1a30.firebasestorage.app",
+  messagingSenderId: "557121011575",
+  appId: "1:557121011575:web:6ea1d969f61325578deb72",
+  measurementId: "G-6J5L44CB3Y"
 };
 
 let firebaseReady = false;
@@ -657,10 +658,6 @@ function initFirebase(config) {
     auth = firebase.auth();
     db = firebase.firestore();
     firebaseReady = true;
-    if (!_authListenerSetup) {
-      _authListenerSetup = true;
-      setupAuthListener();
-    }
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -674,6 +671,7 @@ function applyFirebaseConfig() {
     if (initFirebase(cfg)) {
       localStorage.setItem('fbConfig', JSON.stringify(cfg));
       closeModal('configModal');
+      document.getElementById('firebaseNotice').style.display = 'none';
       showToast('Firebase подключён!');
     }
   } catch(e) {
@@ -681,20 +679,34 @@ function applyFirebaseConfig() {
   }
 }
 
-// Try to init from localStorage
-const savedCfg = localStorage.getItem('fbConfig');
-if (savedCfg) {
-  try { initFirebase(JSON.parse(savedCfg)); } catch(e) {}
-}
-if (!firebaseReady) {
-  setTimeout(() => {
-    if(!firebaseReady) document.getElementById('firebaseNotice').style.display = 'block';
-  }, 800);
-} else {
-  document.getElementById('firebaseNotice').style.display = 'none';
-}
+// ===== INITIALIZE FIREBASE IMMEDIATELY =====
+(function() {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    auth = firebase.auth();
+    db = firebase.firestore();
+    firebaseReady = true;
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    // Fallback to localStorage config
+    const savedCfg = localStorage.getItem('fbConfig');
+    if (savedCfg) {
+      try { initFirebase(JSON.parse(savedCfg)); } catch(e2) {}
+    }
+  }
+  if (!firebaseReady) {
+    setTimeout(() => {
+      if(!firebaseReady) document.getElementById('firebaseNotice').style.display = 'block';
+    }, 800);
+  }
+})();
 
-// ===== LOCAL STATE (fallback when Firebase not ready) =====
+// Start auth listener — called after all variables declared below
+// setupAuthListener() is called at the bottom of variable initialization
+
+// ===== LOCAL STATE =====
 let currentUser = null;
 let localUsers = JSON.parse(localStorage.getItem('sn_users') || '{}');
 let localPosts = JSON.parse(localStorage.getItem('sn_posts') || '[]');
@@ -710,7 +722,6 @@ function saveLocal() {
   try {
     localStorage.setItem('sn_posts', JSON.stringify(localPosts));
   } catch(e) {
-    // If quota exceeded, save posts without embedded images
     try {
       const postsNoImg = localPosts.map(p => ({...p, img: p.img && p.img.startsWith('data:') ? null : p.img}));
       localStorage.setItem('sn_posts', JSON.stringify(postsNoImg));
@@ -721,6 +732,9 @@ function saveLocal() {
   try { localStorage.setItem('sn_messages', JSON.stringify(localMessages)); } catch(e) {}
   try { localStorage.setItem('sn_users', JSON.stringify(localUsers)); } catch(e) {}
 }
+
+// Now that all variables are declared, start the auth listener
+setupAuthListener();
 
 // ===== AUTH =====
 function setupAuthListener() {
