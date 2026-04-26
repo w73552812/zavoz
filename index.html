@@ -699,11 +699,19 @@ let feedPhotoData = null;
 let channelPhotoData = null;
 
 function saveLocal() {
-  localStorage.setItem('sn_posts', JSON.stringify(localPosts));
-  localStorage.setItem('sn_channels', JSON.stringify(localChannels));
-  localStorage.setItem('sn_communities', JSON.stringify(localCommunities));
-  localStorage.setItem('sn_messages', JSON.stringify(localMessages));
-  localStorage.setItem('sn_users', JSON.stringify(localUsers));
+  try {
+    localStorage.setItem('sn_posts', JSON.stringify(localPosts));
+  } catch(e) {
+    // If quota exceeded, save posts without embedded images
+    try {
+      const postsNoImg = localPosts.map(p => ({...p, img: p.img && p.img.startsWith('data:') ? null : p.img}));
+      localStorage.setItem('sn_posts', JSON.stringify(postsNoImg));
+    } catch(e2) {}
+  }
+  try { localStorage.setItem('sn_channels', JSON.stringify(localChannels)); } catch(e) {}
+  try { localStorage.setItem('sn_communities', JSON.stringify(localCommunities)); } catch(e) {}
+  try { localStorage.setItem('sn_messages', JSON.stringify(localMessages)); } catch(e) {}
+  try { localStorage.setItem('sn_users', JSON.stringify(localUsers)); } catch(e) {}
 }
 
 // ===== AUTH =====
@@ -711,11 +719,13 @@ function setupAuthListener() {
   auth.onAuthStateChanged(user => {
     if (user) {
       const saved = localUsers[user.uid] || {};
-      const isNew = !saved.uid;
       currentUser = { uid: user.uid, name: user.displayName || user.email.split('@')[0], email: user.email, photo: user.photoURL };
       currentUser = { ...currentUser, ...saved, uid: user.uid };
-      // If google sign in and no username set yet, show profile setup
-      if (user.providerData[0]?.providerId === 'google.com' && !saved.usernameSet) {
+      // Use a separate localStorage key per uid to track if profile was set up
+      const profileSetupKey = 'sn_profileset_' + user.uid;
+      const profileAlreadySet = localStorage.getItem(profileSetupKey) === '1';
+      const isGoogle = user.providerData[0]?.providerId === 'google.com';
+      if (isGoogle && !profileAlreadySet) {
         currentUser.photo = saved.photo || user.photoURL;
         localUsers[user.uid] = currentUser;
         saveLocal();
@@ -798,6 +808,27 @@ function showApp() {
   renderProfile();
   renderTrending();
   setupComposer();
+  // Real-time sync from Firestore if connected
+  if(firebaseReady && db) {
+    db.collection('posts').orderBy('ts','desc').limit(100)
+      .onSnapshot(snap => {
+        snap.forEach(doc => {
+          const data = { ...doc.data(), id: doc.id };
+          const idx = localPosts.findIndex(p=>p.id===doc.id);
+          if(idx > -1) {
+            // Keep showComments state
+            data.showComments = localPosts[idx].showComments;
+            localPosts[idx] = data;
+          } else {
+            localPosts.push(data);
+          }
+        });
+        localPosts.sort((a,b)=>b.ts-a.ts);
+        saveLocal();
+        renderFeed();
+        renderProfile();
+      }, ()=>{});
+  }
 }
 
 function updateTopUser() {
@@ -819,9 +850,13 @@ function setupComposer() {
   const cat = document.getElementById('composerAvaText');
   if (currentUser.photo) { ca.src=currentUser.photo; ca.style.display='block'; cat.style.display='none'; }
   else { ca.style.display='none'; cat.style.display='flex'; cat.textContent=initials(currentUser.name); }
-  document.getElementById('feedPostText').addEventListener('input', function() {
-    document.getElementById('feedPostBtn').disabled = !this.value.trim() && !feedPhotoData;
-  });
+  const feedText = document.getElementById('feedPostText');
+  if(feedText && !feedText._listenerSet) {
+    feedText._listenerSet = true;
+    feedText.addEventListener('input', function() {
+      document.getElementById('feedPostBtn').disabled = !this.value.trim() && !feedPhotoData;
+    });
+  }
 }
 
 // ===== HELPERS =====
@@ -1091,18 +1126,27 @@ function clearFeedImg() {
 }
 
 function uploadPhoto(file, cb) {
-  // Try Firebase Storage first, fallback to base64
-  if(firebaseReady && storage) {
-    const ref = storage.ref('photos/'+uid()+'.jpg');
-    ref.put(file).then(snap => snap.ref.getDownloadURL()).then(url => cb(url)).catch(() => readAsBase64(file, cb));
-  } else {
-    readAsBase64(file, cb);
-  }
+  compressAndBase64(file, cb);
 }
 
-function readAsBase64(file, cb) {
+function compressAndBase64(file, cb) {
   const reader = new FileReader();
-  reader.onload = e => cb(e.target.result);
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if(w > MAX || h > MAX) {
+        if(w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = e.target.result;
+  };
   reader.readAsDataURL(file);
 }
 
@@ -1119,6 +1163,11 @@ function submitFeedPost() {
   clearFeedImg();
   document.getElementById('feedPostBtn').disabled = true;
   saveLocal(); renderFeed();
+  // Save to Firestore if available
+  if(firebaseReady && db) {
+    const {showComments, ...firestorePost} = post;
+    db.collection('posts').doc(post.id).set(firestorePost).catch(()=>{});
+  }
   showToast('Пост опубликован!');
 }
 
@@ -1524,6 +1573,8 @@ function saveGoogleProfile() {
   currentUser.usernameSet = true;
   if(_gpNewPhoto) currentUser.photo = _gpNewPhoto;
   localUsers[currentUser.uid] = currentUser;
+  // Mark profile as set up so modal never shows again for this account
+  localStorage.setItem('sn_profileset_' + currentUser.uid, '1');
   saveLocal();
   closeModal('googleProfileModal');
   updateTopUser(); renderProfile(); setupComposer();
@@ -1573,6 +1624,10 @@ function submitProfilePost() {
   clearProfileImg();
   document.getElementById('profilePostBtn').disabled = true;
   saveLocal(); renderFeed(); renderProfile();
+  if(firebaseReady && db) {
+    const {showComments, ...firestorePost} = post;
+    db.collection('posts').doc(post.id).set(firestorePost).catch(()=>{});
+  }
   showToast('Пост опубликован!');
 }
 
