@@ -647,16 +647,20 @@ const FIREBASE_CONFIG = {
 
 let firebaseReady = false;
 let auth, db, storage;
+let _authListenerSetup = false;
 
 function initFirebase(config) {
   try {
-    if (firebase.apps.length) firebase.app().delete();
-    firebase.initializeApp(config);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
     auth = firebase.auth();
     db = firebase.firestore();
-    storage = firebase.storage();
     firebaseReady = true;
-    setupAuthListener();
+    if (!_authListenerSetup) {
+      _authListenerSetup = true;
+      setupAuthListener();
+    }
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -683,7 +687,11 @@ if (savedCfg) {
   try { initFirebase(JSON.parse(savedCfg)); } catch(e) {}
 }
 if (!firebaseReady) {
-  setTimeout(() => document.getElementById('firebaseNotice').style.display = 'block', 500);
+  setTimeout(() => {
+    if(!firebaseReady) document.getElementById('firebaseNotice').style.display = 'block';
+  }, 800);
+} else {
+  document.getElementById('firebaseNotice').style.display = 'none';
 }
 
 // ===== LOCAL STATE (fallback when Firebase not ready) =====
@@ -716,25 +724,45 @@ function saveLocal() {
 
 // ===== AUTH =====
 function setupAuthListener() {
-  auth.onAuthStateChanged(user => {
+  auth.onAuthStateChanged(async user => {
     if (user) {
-      const saved = localUsers[user.uid] || {};
-      currentUser = { uid: user.uid, name: user.displayName || user.email.split('@')[0], email: user.email, photo: user.photoURL };
-      currentUser = { ...currentUser, ...saved, uid: user.uid };
-      // Use a separate localStorage key per uid to track if profile was set up
+      // Load saved local profile
+      let saved = localUsers[user.uid] || {};
+
+      // Try to load user data from Firestore
+      if (db) {
+        try {
+          const doc = await db.collection('users').doc(user.uid).get();
+          if (doc.exists) {
+            saved = { ...doc.data(), uid: user.uid };
+            localUsers[user.uid] = saved;
+            saveLocal();
+          }
+        } catch(e) {}
+      }
+
+      currentUser = {
+        uid: user.uid,
+        name: saved.name || user.displayName || user.email.split('@')[0],
+        email: user.email,
+        photo: saved.photo || user.photoURL || null,
+        bio: saved.bio || '',
+        username: saved.username || '',
+        followers: saved.followers || 0,
+        following: saved.following || 0,
+      };
+      localUsers[user.uid] = currentUser;
+      saveLocal();
+
+      // Check if this Google user needs profile setup
       const profileSetupKey = 'sn_profileset_' + user.uid;
       const profileAlreadySet = localStorage.getItem(profileSetupKey) === '1';
       const isGoogle = user.providerData[0]?.providerId === 'google.com';
+
+      showApp();
+
       if (isGoogle && !profileAlreadySet) {
-        currentUser.photo = saved.photo || user.photoURL;
-        localUsers[user.uid] = currentUser;
-        saveLocal();
-        showApp();
         openGoogleProfileSetup();
-      } else {
-        localUsers[user.uid] = currentUser;
-        saveLocal();
-        showApp();
       }
     } else {
       showAuth();
@@ -800,6 +828,8 @@ function showLogin() { document.getElementById('regForm').style.display='none'; 
 function showApp() {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'flex';
+  // Hide firebase notice if connected
+  if(firebaseReady) document.getElementById('firebaseNotice').style.display = 'none';
   updateTopUser();
   renderSidebar();
   renderFeed();
@@ -809,25 +839,26 @@ function showApp() {
   renderTrending();
   setupComposer();
   // Real-time sync from Firestore if connected
-  if(firebaseReady && db) {
+  if(firebaseReady && db && !window._postsListenerActive) {
+    window._postsListenerActive = true;
     db.collection('posts').orderBy('ts','desc').limit(100)
       .onSnapshot(snap => {
         snap.forEach(doc => {
           const data = { ...doc.data(), id: doc.id };
-          const idx = localPosts.findIndex(p=>p.id===doc.id);
+          const idx = localPosts.findIndex(p => p.id === doc.id);
           if(idx > -1) {
-            // Keep showComments state
             data.showComments = localPosts[idx].showComments;
             localPosts[idx] = data;
           } else {
             localPosts.push(data);
           }
         });
-        localPosts.sort((a,b)=>b.ts-a.ts);
+        localPosts.sort((a,b) => b.ts - a.ts);
         saveLocal();
         renderFeed();
-        renderProfile();
-      }, ()=>{});
+        // Only re-render profile posts if on profile page
+        if(document.getElementById('page-profile').classList.contains('active')) renderProfile();
+      }, e => console.warn('Firestore sync error:', e));
   }
 }
 
@@ -1508,6 +1539,9 @@ function saveProfile() {
   if(window._epNewPhoto) currentUser.photo = window._epNewPhoto;
   localUsers[currentUser.uid] = currentUser;
   saveLocal();
+  if(firebaseReady && db) {
+    db.collection('users').doc(currentUser.uid).set(currentUser).catch(()=>{});
+  }
   closeModal('editProfileModal');
   updateTopUser(); renderProfile(); setupComposer();
   showToast('Профиль сохранён!');
@@ -1570,12 +1604,15 @@ function saveGoogleProfile() {
   currentUser.name = name;
   if(username) currentUser.username = username;
   currentUser.bio = bio;
-  currentUser.usernameSet = true;
   if(_gpNewPhoto) currentUser.photo = _gpNewPhoto;
   localUsers[currentUser.uid] = currentUser;
-  // Mark profile as set up so modal never shows again for this account
+  // Permanently mark profile as configured - key per uid so it's user-specific
   localStorage.setItem('sn_profileset_' + currentUser.uid, '1');
   saveLocal();
+  // Save to Firestore
+  if(firebaseReady && db) {
+    db.collection('users').doc(currentUser.uid).set(currentUser).catch(()=>{});
+  }
   closeModal('googleProfileModal');
   updateTopUser(); renderProfile(); setupComposer();
   showToast('Профиль настроен!');
@@ -1588,6 +1625,9 @@ function handleProfileAva(e) {
     currentUser.photo = data;
     localUsers[currentUser.uid] = currentUser;
     saveLocal();
+    if(firebaseReady && db) {
+      db.collection('users').doc(currentUser.uid).set(currentUser).catch(()=>{});
+    }
     renderProfile(); updateTopUser(); setupComposer();
     showToast('Фото обновлено!');
   });
