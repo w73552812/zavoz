@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocNet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<style>
+:root {
+  --bg: #0e0f13;
+  --bg2: #16181f;
+  --bg3: #1e2028;
+  --bg4: #252831;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f5;
+  --text2: #9a9cb0;
+  --text3: #5c5e72;
+  --accent: #6c63ff;
+  --accent2: #8b85ff;
+  --accent-glow: rgba(108,99,255,0.3);
+  --green: #22c55e;
+  --red: #ef4444;
+  --orange: #f97316;
+  --yellow: #eab308;
+  --pink: #ec4899;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 18px;
+  --font: 'Manrope', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+a{color:inherit;text-decoration:none;}
+button{font-family:var(--font);cursor:pointer;}
+input,textarea{font-family:var(--font);}
+
+/* LAYOUT */
+.app{display:flex;flex-direction:column;height:100vh;}
+.topbar{height:54px;background:rgba(14,15,19,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;position:sticky;top:0;z-index:100;flex-shrink:0;}
+.logo{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-0.5px;flex-shrink:0;}
+.logo span{color:var(--text);}
+.search-wrap{flex:1;max-width:320px;}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:7px 14px 7px 36px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;}
+.search-input::placeholder{color:var(--text3);}
+.search-input:focus{border-color:var(--accent);}
+.search-wrap{position:relative;}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;}
+.topnav{display:flex;gap:4px;flex:1;justify-content:center;}
+.tnav-btn{padding:6px 14px;border:none;background:none;color:var(--text2);border-radius:var(--radius-sm);font-size:13px;font-weight:500;transition:all 0.15s;position:relative;}
+.tnav-btn:hover{background:var(--bg3);color:var(--text);}
+.tnav-btn.active{background:var(--bg4);color:var(--text);}
+.tnav-btn .badge{position:absolute;top:4px;right:6px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;}
+.top-user{display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:var(--radius-sm);padding:4px 8px;transition:background 0.15s;}
+.top-user:hover{background:var(--bg3);}
+.ava{border-radius:50%;flex-shrink:0;object-fit:cover;}
+.ava-text{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;}
+.top-uname{font-size:13px;font-weight:500;}
+
+.body{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:220px;padding:16px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex-shrink:0;border-right:1px solid var(--border);}
+.sb-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text2);font-size:13px;font-weight:500;width:100%;text-align:left;transition:all 0.15s;cursor:pointer;}
+.sb-btn:hover{background:var(--bg3);color:var(--text);}
+.sb-btn.active{background:var(--bg4);color:var(--text);}
+.sb-btn svg{flex-shrink:0;opacity:0.7;}
+.sb-btn.active svg{opacity:1;}
+.sb-section{padding:10px 12px 6px;font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-top:8px;}
+.sb-channel{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.15s;font-size:13px;color:var(--text2);}
+.sb-channel:hover{background:var(--bg3);color:var(--text);}
+.sb-channel.active{background:var(--bg4);color:var(--text);}
+.sb-hash{color:var(--text3);font-weight:600;font-size:15px;line-height:1;}
+.main-content{flex:1;overflow-y:auto;padding:0;}
+.right-panel{width:260px;border-left:1px solid var(--border);padding:16px;overflow-y:auto;flex-shrink:0;}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;}
+.feed-wrap{max-width:600px;margin:0 auto;padding:20px 16px;}
+.channel-wrap{max-width:700px;margin:0 auto;padding:20px 16px;}
+.communities-wrap{max-width:900px;margin:0 auto;padding:20px 16px;}
+.messages-wrap{height:100%;display:flex;}
+
+/* COMPOSER */
+.composer{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;}
+.composer-top{display:flex;gap:12px;margin-bottom:12px;}
+.composer-body{flex:1;}
+.composer-textarea{width:100%;background:none;border:none;color:var(--text);font-size:15px;resize:none;min-height:56px;outline:none;line-height:1.5;}
+.composer-textarea::placeholder{color:var(--text3);}
+.composer-preview{margin-top:8px;position:relative;display:inline-block;}
+.composer-preview img{max-height:200px;max-width:100%;border-radius:var(--radius-sm);display:block;}
+.remove-img{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);border:none;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
+.composer-footer{display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:12px;}
+.tool-btn{background:none;border:none;color:var(--text2);padding:6px;border-radius:var(--radius-sm);display:flex;align-items:center;transition:all 0.15s;}
+.tool-btn:hover{background:var(--bg3);color:var(--accent);}
+.post-submit{margin-left:auto;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:7px 20px;font-size:13px;font-weight:600;transition:background 0.15s;}
+.post-submit:hover{background:var(--accent2);}
+.post-submit:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* POST CARD */
+.post-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;transition:border-color 0.15s;}
+.post-card:hover{border-color:var(--border2);}
+.post-header{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 10px;}
+.post-meta{flex:1;}
+.post-author{font-weight:600;font-size:14px;cursor:pointer;}
+.post-author:hover{color:var(--accent2);}
+.post-info{font-size:12px;color:var(--text3);}
+.post-body{padding:0 16px 12px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+.post-img-wrap{padding:0 16px 12px;}
+.post-img-wrap img{width:100%;border-radius:var(--radius-sm);max-height:400px;object-fit:cover;display:block;}
+.post-actions{display:flex;align-items:center;gap:0;padding:0 10px 8px;border-top:1px solid var(--border);}
+.pa-btn{display:flex;align-items:center;gap:5px;padding:7px 10px;border:none;background:none;color:var(--text2);border-radius:var(--radius-sm);font-size:12px;font-weight:500;transition:all 0.15s;cursor:pointer;}
+.pa-btn:hover{background:var(--bg3);color:var(--text);}
+.pa-btn.liked{color:var(--red);}
+.pa-btn.reposted{color:var(--green);}
+.reactions-bar{padding:6px 16px;display:flex;flex-wrap:wrap;gap:4px;}
+.reaction-chip{display:inline-flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:13px;cursor:pointer;transition:all 0.15s;}
+.reaction-chip:hover,.reaction-chip.mine{background:var(--bg4);border-color:var(--accent);}
+.reaction-chip span{font-size:11px;color:var(--text2);}
+.reaction-picker{display:none;position:absolute;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;gap:4px;z-index:50;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+.reaction-picker.show{display:flex;}
+.rp-btn{background:none;border:none;font-size:20px;cursor:pointer;padding:4px 6px;border-radius:var(--radius-sm);transition:background 0.15s;}
+.rp-btn:hover{background:var(--bg4);}
+.post-relative{position:relative;}
+
+/* COMMENTS */
+.comments-section{border-top:1px solid var(--border);padding:12px 16px;}
+.comment-item{display:flex;gap:10px;margin-bottom:12px;}
+.comment-bubble{flex:1;}
+.comment-header{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
+.c-author{font-weight:600;font-size:13px;cursor:pointer;}
+.c-author:hover{color:var(--accent2);}
+.c-time{font-size:11px;color:var(--text3);}
+.c-text{font-size:13px;line-height:1.5;color:var(--text);}
+.c-actions{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.c-act{background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;transition:color 0.15s;display:flex;align-items:center;gap:3px;}
+.c-act:hover{color:var(--text2);}
+.c-act.liked{color:var(--red);}
+.c-reactions{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px;}
+.c-reaction{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 7px;font-size:12px;cursor:pointer;transition:all 0.15s;}
+.c-reaction:hover,.c-reaction.mine{border-color:var(--accent);}
+.reply-thread{border-left:2px solid var(--border);margin-left:18px;padding-left:10px;margin-top:8px;}
+.comment-input-row{display:flex;gap:8px;align-items:flex-end;margin-top:6px;}
+.c-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;resize:none;min-height:36px;line-height:1.4;}
+.c-input:focus{border-color:var(--accent);}
+.c-send{background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:7px 14px;font-size:12px;font-weight:600;white-space:nowrap;}
+
+/* CHANNELS */
+.channel-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+.ch-icon{font-size:24px;}
+.ch-title{font-size:20px;font-weight:700;}
+.ch-desc{font-size:13px;color:var(--text2);}
+.channel-tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--bg3);padding:4px;border-radius:var(--radius-sm);}
+.ch-tab{flex:1;padding:7px 12px;border:none;background:none;color:var(--text2);border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;}
+.ch-tab.active{background:var(--bg2);color:var(--text);}
+
+/* COMMUNITIES */
+.communities-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.community-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:all 0.2s;cursor:pointer;}
+.community-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.comm-cover{height:80px;display:flex;align-items:center;justify-content:center;font-size:36px;}
+.comm-body{padding:14px;}
+.comm-name{font-weight:700;font-size:15px;margin-bottom:4px;}
+.comm-desc{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.4;}
+.comm-stats{display:flex;gap:12px;font-size:12px;color:var(--text3);margin-bottom:10px;}
+.comm-join{width:100%;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:background 0.15s;}
+.comm-join:hover{background:var(--accent2);}
+.comm-join.joined{background:var(--bg3);color:var(--text2);border:1px solid var(--border);}
+.new-comm-btn{background:var(--bg2);border:2px dashed var(--border2);border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:30px;cursor:pointer;color:var(--text3);transition:all 0.15s;min-height:180px;}
+.new-comm-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* MESSAGES */
+.msg-sidebar{width:280px;border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.msg-sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.msg-sidebar-header h3{font-size:16px;font-weight:700;}
+.new-msg-btn{background:var(--accent);border:none;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;}
+.conv-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;transition:background 0.15s;}
+.conv-item:hover,.conv-item.active{background:var(--bg3);}
+.conv-info{flex:1;min-width:0;}
+.conv-name{font-weight:600;font-size:13px;}
+.conv-preview{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.conv-time{font-size:11px;color:var(--text3);flex-shrink:0;}
+.msg-main{flex:1;display:flex;flex-direction:column;}
+.msg-chat-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.msg-chat-header .name{font-weight:600;font-size:14px;}
+.msg-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;}
+.msg-bubble{max-width:68%;padding:9px 14px;border-radius:16px;font-size:13px;line-height:1.5;word-break:break-word;}
+.msg-bubble.out{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px;}
+.msg-bubble.in{align-self:flex-start;background:var(--bg3);color:var(--text);border-bottom-left-radius:4px;}
+.msg-time{font-size:10px;opacity:0.6;margin-top:2px;text-align:right;}
+.msg-input-bar{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;}
+.msg-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 16px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;resize:none;max-height:100px;line-height:1.4;}
+.msg-input:focus{border-color:var(--accent);}
+.msg-send{background:var(--accent);border:none;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.msg-send:hover{background:var(--accent2);}
+
+/* PROFILE PAGE */
+.profile-wrap{max-width:640px;margin:0 auto;padding:0 16px 40px;}
+.profile-cover-area{height:160px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:linear-gradient(135deg,#1a1640,#2d2060,#6c63ff44);position:relative;overflow:hidden;}
+.profile-cover-area::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 60%,var(--bg2));}
+.profile-info-card{background:var(--bg2);border:1px solid var(--border);padding:16px 20px;border-radius:0 0 var(--radius-lg) var(--radius-lg);margin-bottom:16px;}
+.profile-ava-row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:-42px;margin-bottom:12px;}
+.profile-big-ava{width:72px;height:72px;border-radius:50%;border:3px solid var(--bg2);object-fit:cover;}
+.profile-big-ava-text{width:72px;height:72px;border-radius:50%;border:3px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;}
+.edit-profile-btn{background:none;border:1px solid var(--border2);color:var(--text);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;}
+.edit-profile-btn:hover{border-color:var(--accent);color:var(--accent);}
+.profile-name{font-size:18px;font-weight:700;}
+.profile-handle{font-size:13px;color:var(--text3);margin-bottom:8px;}
+.profile-bio{font-size:14px;color:var(--text2);margin-bottom:10px;}
+.profile-stats{display:flex;gap:20px;font-size:13px;}
+.pstat .n{font-weight:700;color:var(--text);}
+.pstat .l{color:var(--text3);}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.overlay.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:28px;width:440px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:20px;font-weight:700;margin-bottom:6px;}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:22px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text2);}
+.field input,.field textarea,.field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:14px;outline:none;transition:border-color 0.2s;font-family:var(--font);}
+.field input:focus,.field textarea:focus{border-color:var(--accent);}
+.field textarea{resize:vertical;min-height:72px;}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:20px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.15s;width:100%;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-google{background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:20px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-bottom:12px;transition:all 0.15s;}
+.btn-google:hover{border-color:var(--accent);background:var(--bg4);}
+.divider{display:flex;align-items:center;gap:12px;margin:14px 0;color:var(--text3);font-size:12px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.modal-switch{text-align:center;margin-top:14px;font-size:13px;color:var(--text2);}
+.modal-link{color:var(--accent2);cursor:pointer;}
+.modal-link:hover{text-decoration:underline;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.btn-secondary{background:none;border:1px solid var(--border);color:var(--text2);border-radius:var(--radius-sm);padding:8px 18px;font-size:13px;cursor:pointer;transition:all 0.15s;}
+.btn-secondary:hover{border-color:var(--border2);color:var(--text);}
+.btn-sm{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;}
+
+/* RIGHT PANEL */
+.rp-section{margin-bottom:20px;}
+.rp-title{font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;}
+.rp-user{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;}
+.rp-user:hover .rp-uname{color:var(--accent2);}
+.rp-uname{font-size:13px;font-weight:500;transition:color 0.15s;}
+.rp-usub{font-size:11px;color:var(--text3);}
+.online-dot{width:8px;height:8px;border-radius:50%;background:var(--green);margin-left:auto;flex-shrink:0;}
+.trending-item{padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.trending-item:last-child{border:none;}
+.trending-tag{font-size:13px;font-weight:600;color:var(--accent2);}
+.trending-count{font-size:12px;color:var(--text3);}
+
+/* AUTH */
+.auth-screen{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);}
+.auth-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:36px;width:400px;max-width:95vw;}
+.auth-logo{font-size:28px;font-weight:700;color:var(--accent);letter-spacing:-1px;margin-bottom:8px;}
+.auth-logo span{color:var(--text);}
+.auth-tagline{font-size:14px;color:var(--text2);margin-bottom:28px;}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text3);}
+.empty-state .icon{font-size:40px;margin-bottom:12px;}
+.empty-state p{font-size:14px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 16px;font-size:13px;z-index:9999;opacity:0;transform:translateY(10px);transition:all 0.25s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+/* EMOJI PICKER */
+.emoji-bar{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;padding:6px;background:var(--bg3);border-radius:var(--radius-sm);}
+.e-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:3px 5px;border-radius:6px;transition:background 0.15s;}
+.e-btn:hover{background:var(--bg4);}
+
+/* FILE INPUT */
+input[type=file]{display:none;}
+
+/* NOTIFICATION DOT */
+.notif-badge{background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;margin-left:4px;}
+</style>
+</head>
+<body>
+
+<!-- FIREBASE CONFIG NOTICE -->
+<div id="firebaseNotice" style="display:none;position:fixed;top:0;left:0;right:0;background:#f97316;color:#fff;padding:10px 20px;font-size:13px;z-index:9999;text-align:center;">
+  ⚙️ Для работы Google авторизации необходимо настроить Firebase. <a href="#" onclick="document.getElementById('configModal').classList.add('show');document.getElementById('firebaseNotice').style.display='none'" style="color:#fff;font-weight:700;text-decoration:underline">Настроить сейчас</a>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Soc<span>Net</span></div>
+    <div class="auth-tagline">Соединяй людей, делись моментами</div>
+    
+    <div id="loginForm">
+      <button class="btn-google" onclick="loginWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Войти через Google
+      </button>
+      <div class="divider">или</div>
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com"></div>
+      <div class="field"><label>Пароль</label><input type="password" id="loginPass" placeholder="••••••"></div>
+      <button class="btn-primary" onclick="loginEmail()">Войти</button>
+      <div class="modal-switch">Нет аккаунта? <span class="modal-link" onclick="showReg()">Зарегистрироваться</span></div>
+    </div>
+    
+    <div id="regForm" style="display:none">
+      <button class="btn-google" onclick="loginWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Зарегистрироваться через Google
+      </button>
+      <div class="divider">или</div>
+      <div class="field"><label>Имя</label><input type="text" id="regName" placeholder="Иван Иванов"></div>
+      <div class="field"><label>Email</label><input type="email" id="regEmail" placeholder="you@example.com"></div>
+      <div class="field"><label>Пароль</label><input type="password" id="regPass" placeholder="минимум 6 символов"></div>
+      <button class="btn-primary" onclick="registerEmail()">Создать аккаунт</button>
+      <div class="modal-switch">Уже есть аккаунт? <span class="modal-link" onclick="showLogin()">Войти</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="app" style="display:none">
+  <div class="topbar">
+    <div class="logo">Soc<span>Net</span></div>
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" placeholder="Поиск людей, каналов, сообществ..." oninput="handleSearch(this.value)">
+    </div>
+    <div class="topnav">
+      <button class="tnav-btn active" id="tnav-feed" onclick="nav('feed')">Лента</button>
+      <button class="tnav-btn" id="tnav-channels" onclick="nav('channels')">Каналы</button>
+      <button class="tnav-btn" id="tnav-communities" onclick="nav('communities')">Сообщества</button>
+      <button class="tnav-btn" id="tnav-messages" onclick="nav('messages')">Сообщения</button>
+      <button class="tnav-btn" id="tnav-profile" onclick="nav('profile')">Профиль</button>
+    </div>
+    <div class="top-user" onclick="nav('profile')" id="topUserArea">
+      <img class="ava" id="topAva" width="30" height="30" src="" alt="" style="display:none">
+      <div class="ava-text" id="topAvaText" style="width:30px;height:30px;font-size:12px;background:#6c63ff22;color:var(--accent2)">?</div>
+      <span class="top-uname" id="topUname">—</span>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sidebar" id="sidebarEl">
+      <button class="sb-btn active" id="sb-feed" onclick="nav('feed')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        Главная
+      </button>
+      <button class="sb-btn" id="sb-communities" onclick="nav('communities')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Сообщества
+      </button>
+      <button class="sb-btn" id="sb-messages" onclick="nav('messages')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Сообщения
+      </button>
+      <button class="sb-btn" id="sb-profile" onclick="nav('profile')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Профиль
+      </button>
+      <div class="sb-section">Мои каналы</div>
+      <div id="myChannelsList"></div>
+      <button class="sb-btn" onclick="openCreateChannel()" style="color:var(--accent2);margin-top:4px;">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Создать канал
+      </button>
+    </div>
+
+    <div class="main-content">
+      <!-- FEED -->
+      <div class="page active" id="page-feed">
+        <div class="feed-wrap">
+          <div class="composer" id="feedComposer">
+            <div class="composer-top">
+              <img class="ava" id="composerAva" width="38" height="38" src="" style="display:none">
+              <div class="ava-text" id="composerAvaText" style="width:38px;height:38px;font-size:15px;background:#6c63ff22;color:var(--accent2)">?</div>
+              <div class="composer-body">
+                <textarea class="composer-textarea" id="feedPostText" placeholder="Что у вас нового?" rows="2" oninput="autoResize(this)"></textarea>
+                <div id="feedImgPreview" class="composer-preview" style="display:none">
+                  <img id="feedImgPreviewImg" src="" alt="">
+                  <button class="remove-img" onclick="clearFeedImg()">✕</button>
+                </div>
+              </div>
+            </div>
+            <div class="composer-footer">
+              <input type="file" id="feedPhotoInput" accept="image/*" onchange="handleFeedPhoto(event)">
+              <button class="tool-btn" onclick="document.getElementById('feedPhotoInput').click()" title="Прикрепить фото">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </button>
+              <button class="tool-btn" id="emojiToggle" onclick="toggleEmojiPicker('feedEmoji')" title="Эмодзи">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+              </button>
+              <button class="post-submit" id="feedPostBtn" onclick="submitFeedPost()" disabled>Опубликовать</button>
+            </div>
+            <div id="feedEmoji" style="display:none">
+              <div class="emoji-bar" id="feedEmojiBar"></div>
+            </div>
+          </div>
+          <div id="feedPosts"></div>
+        </div>
+      </div>
+
+      <!-- CHANNELS -->
+      <div class="page" id="page-channels">
+        <div class="channel-wrap" id="channelContent">
+          <div class="empty-state">
+            <div class="icon">📢</div>
+            <p>Выберите канал из боковой панели или создайте новый</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMMUNITIES -->
+      <div class="page" id="page-communities">
+        <div class="communities-wrap">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h2 style="font-size:20px;font-weight:700;">Сообщества</h2>
+            <button class="btn-sm" onclick="openCreateCommunity()">+ Создать</button>
+          </div>
+          <div class="communities-grid" id="commGrid"></div>
+        </div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="page" id="page-messages" style="height:calc(100vh - 54px)">
+        <div class="messages-wrap">
+          <div class="msg-sidebar">
+            <div class="msg-sidebar-header">
+              <h3>Сообщения</h3>
+              <button class="new-msg-btn" onclick="openNewMsg()" title="Новое сообщение">+</button>
+            </div>
+            <div id="convList"></div>
+          </div>
+          <div class="msg-main" id="msgMain">
+            <div class="empty-state" style="margin:auto;">
+              <div class="icon">💬</div>
+              <p>Выберите диалог или начните новый</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFILE -->
+      <div class="page" id="page-profile">
+        <div class="profile-wrap">
+          <div class="profile-cover-area" id="profileCoverArea"></div>
+          <div class="profile-info-card">
+            <div class="profile-ava-row">
+              <img class="profile-big-ava" id="profileBigAva" src="" alt="" style="display:none">
+              <div class="profile-big-ava-text" id="profileBigAvaText" style="background:#6c63ff22;color:var(--accent2)">?</div>
+              <button class="edit-profile-btn" onclick="openEditProfile()">Редактировать</button>
+            </div>
+            <div class="profile-name" id="profileName">—</div>
+            <div class="profile-handle" id="profileHandle">@—</div>
+            <div class="profile-bio" id="profileBioText"></div>
+            <div class="profile-stats">
+              <div class="pstat"><span class="n" id="statPosts">0</span> <span class="l">постов</span></div>
+              <div class="pstat"><span class="n" id="statFollowers">0</span> <span class="l">подписчиков</span></div>
+              <div class="pstat"><span class="n" id="statFollowing">0</span> <span class="l">подписок</span></div>
+            </div>
+          </div>
+          <div id="profilePosts"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel" id="rightPanelEl">
+      <div class="rp-section">
+        <div class="rp-title">Онлайн</div>
+        <div id="onlineList"><div style="font-size:13px;color:var(--text3)">Только вы</div></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-title">Trending</div>
+        <div id="trendingList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="createChannelModal">
+  <div class="modal">
+    <div class="modal-title">Создать канал</div>
+    <div class="modal-sub">Канал — публичное пространство для контента</div>
+    <div class="field"><label>Название канала</label><input type="text" id="chName" placeholder="Мой канал"></div>
+    <div class="field"><label>Описание</label><textarea id="chDesc" placeholder="О чём этот канал?"></textarea></div>
+    <div class="field"><label>Иконка (эмодзи)</label><input type="text" id="chIcon" placeholder="📢" maxlength="2"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('createChannelModal')">Отмена</button>
+      <button class="btn-sm" onclick="createChannel()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="createCommunityModal">
+  <div class="modal">
+    <div class="modal-title">Создать сообщество</div>
+    <div class="field"><label>Название</label><input type="text" id="commName" placeholder="Название сообщества"></div>
+    <div class="field"><label>Описание</label><textarea id="commDesc" placeholder="О чём это сообщество?"></textarea></div>
+    <div class="field"><label>Тема (эмодзи)</label><input type="text" id="commEmoji" placeholder="🌟" maxlength="2"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('createCommunityModal')">Отмена</button>
+      <button class="btn-sm" onclick="createCommunity()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="editProfileModal">
+  <div class="modal">
+    <div class="modal-title">Редактировать профиль</div>
+    <div class="field"><label>Имя</label><input type="text" id="epName" placeholder="Ваше имя"></div>
+    <div class="field"><label>О себе</label><textarea id="epBio" placeholder="Расскажите о себе..."></textarea></div>
+    <div class="field"><label>Сайт</label><input type="text" id="epSite" placeholder="https://"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('editProfileModal')">Отмена</button>
+      <button class="btn-sm" onclick="saveProfile()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="newMsgModal">
+  <div class="modal">
+    <div class="modal-title">Новое сообщение</div>
+    <div class="field"><label>Email получателя</label><input type="email" id="newMsgEmail" placeholder="user@example.com"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('newMsgModal')">Отмена</button>
+      <button class="btn-sm" onclick="startNewConv()">Написать</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="configModal">
+  <div class="modal">
+    <div class="modal-title">⚙️ Настройка Firebase</div>
+    <div class="modal-sub">Для полноценной работы вставьте конфигурацию вашего Firebase проекта. Без неё приложение работает в локальном режиме.</div>
+    <div class="field"><label>Firebase Config (JSON)</label><textarea id="fbConfig" rows="8" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea></div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:12px;">Инструкция: console.firebase.google.com → Ваш проект → Настройки → Ваши приложения → SDK</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('configModal')">Пропустить</button>
+      <button class="btn-sm" onclick="applyFirebaseConfig()">Применить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== FIREBASE CONFIG (замените своими данными) =====
+const FIREBASE_CONFIG = {
+  // apiKey: "YOUR_API_KEY",
+  // authDomain: "YOUR_PROJECT.firebaseapp.com",
+  // projectId: "YOUR_PROJECT_ID",
+  // storageBucket: "YOUR_PROJECT.appspot.com",
+  // messagingSenderId: "YOUR_ID",
+  // appId: "YOUR_APP_ID"
+};
+
+let firebaseReady = false;
+let auth, db, storage;
+
+function initFirebase(config) {
+  try {
+    if (firebase.apps.length) firebase.app().delete();
+    firebase.initializeApp(config);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    storage = firebase.storage();
+    firebaseReady = true;
+    setupAuthListener();
+    return true;
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    return false;
+  }
+}
+
+function applyFirebaseConfig() {
+  try {
+    const cfg = JSON.parse(document.getElementById('fbConfig').value);
+    if (initFirebase(cfg)) {
+      localStorage.setItem('fbConfig', JSON.stringify(cfg));
+      closeModal('configModal');
+      showToast('Firebase подключён!');
+    }
+  } catch(e) {
+    showToast('Неверный формат конфига');
+  }
+}
+
+// Try to init from localStorage
+const savedCfg = localStorage.getItem('fbConfig');
+if (savedCfg) {
+  try { initFirebase(JSON.parse(savedCfg)); } catch(e) {}
+}
+if (!firebaseReady) {
+  setTimeout(() => document.getElementById('firebaseNotice').style.display = 'block', 500);
+}
+
+// ===== LOCAL STATE (fallback when Firebase not ready) =====
+let currentUser = null;
+let localUsers = JSON.parse(localStorage.getItem('sn_users') || '{}');
+let localPosts = JSON.parse(localStorage.getItem('sn_posts') || '[]');
+let localChannels = JSON.parse(localStorage.getItem('sn_channels') || '[]');
+let localCommunities = JSON.parse(localStorage.getItem('sn_communities') || '[]');
+let localMessages = JSON.parse(localStorage.getItem('sn_messages') || '{}');
+let currentChannel = null;
+let currentConv = null;
+let feedPhotoData = null;
+let channelPhotoData = null;
+
+function saveLocal() {
+  localStorage.setItem('sn_posts', JSON.stringify(localPosts));
+  localStorage.setItem('sn_channels', JSON.stringify(localChannels));
+  localStorage.setItem('sn_communities', JSON.stringify(localCommunities));
+  localStorage.setItem('sn_messages', JSON.stringify(localMessages));
+  localStorage.setItem('sn_users', JSON.stringify(localUsers));
+}
+
+// ===== AUTH =====
+function setupAuthListener() {
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = { uid: user.uid, name: user.displayName || user.email.split('@')[0], email: user.email, photo: user.photoURL };
+      const saved = localUsers[user.uid] || {};
+      currentUser = { ...currentUser, ...saved, uid: user.uid };
+      localUsers[user.uid] = currentUser;
+      saveLocal();
+      showApp();
+    } else {
+      showAuth();
+    }
+  });
+}
+
+function loginWithGoogle() {
+  if (!firebaseReady) { showToast('Настройте Firebase для входа через Google'); openFirebaseConfig(); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => showToast('Ошибка: ' + e.message));
+}
+
+function loginEmail() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!email || !pass) { showToast('Заполните все поля'); return; }
+  if (!firebaseReady) {
+    // Local mode
+    const uid = btoa(email);
+    const user = localUsers[uid];
+    if (!user || user.password !== pass) { showToast('Неверный email или пароль'); return; }
+    currentUser = { ...user };
+    showApp();
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, pass).catch(e => showToast('Ошибка входа'));
+}
+
+function registerEmail() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  if (!name || !email || !pass) { showToast('Заполните все поля'); return; }
+  if (pass.length < 6) { showToast('Пароль минимум 6 символов'); return; }
+  if (!firebaseReady) {
+    const uid = btoa(email);
+    if (localUsers[uid]) { showToast('Этот email уже занят'); return; }
+    currentUser = { uid, name, email, photo: null, bio: '', site: '', followers: 0, following: 0, password: pass };
+    localUsers[uid] = currentUser;
+    saveLocal();
+    showApp();
+    return;
+  }
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(cred => cred.user.updateProfile({ displayName: name }))
+    .catch(e => showToast('Ошибка регистрации: ' + e.message));
+}
+
+function logout() {
+  if (firebaseReady) auth.signOut();
+  currentUser = null;
+  showAuth();
+}
+
+function showAuth() {
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+}
+function showReg() { document.getElementById('loginForm').style.display='none'; document.getElementById('regForm').style.display='block'; }
+function showLogin() { document.getElementById('regForm').style.display='none'; document.getElementById('loginForm').style.display='block'; }
+
+function showApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  updateTopUser();
+  renderSidebar();
+  renderFeed();
+  renderCommunities();
+  renderConvList();
+  renderProfile();
+  renderTrending();
+  setupComposer();
+}
+
+function updateTopUser() {
+  if (!currentUser) return;
+  const topAva = document.getElementById('topAva');
+  const topAvaText = document.getElementById('topAvaText');
+  if (currentUser.photo) {
+    topAva.src = currentUser.photo; topAva.style.display='block'; topAvaText.style.display='none';
+  } else {
+    topAva.style.display='none'; topAvaText.style.display='flex';
+    topAvaText.textContent = initials(currentUser.name);
+  }
+  document.getElementById('topUname').textContent = currentUser.name.split(' ')[0];
+}
+
+function setupComposer() {
+  if (!currentUser) return;
+  const ca = document.getElementById('composerAva');
+  const cat = document.getElementById('composerAvaText');
+  if (currentUser.photo) { ca.src=currentUser.photo; ca.style.display='block'; cat.style.display='none'; }
+  else { ca.style.display='none'; cat.style.display='flex'; cat.textContent=initials(currentUser.name); }
+  document.getElementById('feedPostText').addEventListener('input', function() {
+    document.getElementById('feedPostBtn').disabled = !this.value.trim() && !feedPhotoData;
+  });
+}
+
+// ===== HELPERS =====
+const EMOJIS = ['😀','😂','❤️','🔥','👍','🎉','😍','🤔','👏','💯','🚀','✨','😎','🙏','💪','🌟','😭','😊','🤣','💀'];
+const REACTIONS = ['❤️','😂','😮','😢','😡','👍','🔥'];
+const COLORS = ['#6c63ff','#22c55e','#ef4444','#f97316','#eab308','#ec4899','#06b6d4','#8b5cf6'];
+
+function initials(name) { return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function colorFor(str) { let h=0; for(let c of (str||'')) h=(h*31+c.charCodeAt(0))%COLORS.length; return COLORS[h]; }
+function timeAgo(ts) {
+  const d = Math.floor((Date.now()-ts)/1000);
+  if(d<60) return 'только что';
+  if(d<3600) return Math.floor(d/60)+'м';
+  if(d<86400) return Math.floor(d/3600)+'ч';
+  return new Date(ts).toLocaleDateString('ru');
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function autoResize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function openFirebaseConfig() {
+  document.getElementById('configModal').classList.add('show');
+}
+
+// ===== NAVIGATION =====
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tnav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const tb = document.getElementById('tnav-'+page);
+  const sb = document.getElementById('sb-'+page);
+  if(tb) tb.classList.add('active');
+  if(sb) sb.classList.add('active');
+  document.getElementById('rightPanelEl').style.display = page==='messages' ? 'none' : 'block';
+  if(page==='profile') renderProfile();
+  if(page==='communities') renderCommunities();
+  if(page==='messages') renderConvList();
+}
+
+// ===== FEED =====
+function renderFeed() {
+  const posts = [...localPosts].sort((a,b)=>b.ts-a.ts);
+  const el = document.getElementById('feedPosts');
+  if (!posts.length) { el.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>Пока нет постов. Будьте первым!</p></div>'; return; }
+  el.innerHTML = posts.map(p => renderPostCard(p)).join('');
+}
+
+function renderPostCard(p) {
+  const isMe = currentUser && p.authorId === currentUser.uid;
+  const liked = currentUser && p.likes && p.likes.includes(currentUser.uid);
+  const color = colorFor(p.authorId);
+  const showComments = p.showComments;
+  const reactions = p.reactions || {};
+  const reactionHTML = Object.entries(reactions).map(([emoji, users]) =>
+    `<span class="reaction-chip ${users.includes(currentUser?.uid)?'mine':''}" onclick="reactPost('${p.id}','${emoji}')">${emoji} <span>${users.length}</span></span>`
+  ).join('');
+
+  return `<div class="post-card post-relative" id="pcard_${p.id}">
+    <div class="post-header">
+      ${p.authorPhoto ? `<img src="${p.authorPhoto}" class="ava" width="38" height="38">` : `<div class="ava-text" style="width:38px;height:38px;font-size:14px;background:${color}22;color:${color}">${initials(p.authorName)}</div>`}
+      <div class="post-meta">
+        <div class="post-author">${p.authorName}</div>
+        <div class="post-info">${timeAgo(p.ts)}${p.channelName ? ` · в #${p.channelName}` : ''}</div>
+      </div>
+      ${isMe ? `<button onclick="deletePost('${p.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;font-size:18px;line-height:1;" title="Удалить">×</button>` : ''}
+    </div>
+    ${p.text ? `<div class="post-body">${escHtml(p.text)}</div>` : ''}
+    ${p.img ? `<div class="post-img-wrap"><img src="${p.img}" alt="фото" loading="lazy"></div>` : ''}
+    ${reactionHTML ? `<div class="reactions-bar">${reactionHTML}</div>` : ''}
+    <div class="post-actions">
+      <button class="pa-btn ${liked?'liked':''}" onclick="likePost('${p.id}')">
+        <svg width="15" height="15" fill="${liked?'currentColor':'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        ${(p.likes||[]).length}
+      </button>
+      <button class="pa-btn" onclick="toggleComments('${p.id}')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        ${(p.comments||[]).length}
+      </button>
+      <div style="position:relative;">
+        <button class="pa-btn" onclick="toggleReactPicker(event,'rp_${p.id}')">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+          Реакция
+        </button>
+        <div class="reaction-picker" id="rp_${p.id}" style="top:36px;left:0;">
+          ${REACTIONS.map(r=>`<button class="rp-btn" onclick="reactPost('${p.id}','${r}');closeReactPicker('rp_${p.id}')">${r}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    ${showComments ? `<div class="comments-section">${renderComments(p)}</div>` : ''}
+  </div>`;
+}
+
+function renderComments(p) {
+  const comments = p.comments || [];
+  const color = colorFor(p.authorId);
+  let html = comments.map(c => renderComment(c, p.id)).join('');
+  html += `<div class="comment-input-row" style="margin-top:10px;">
+    ${currentUser?.photo ? `<img src="${currentUser.photo}" class="ava" width="28" height="28">` : `<div class="ava-text" style="width:28px;height:28px;font-size:11px;background:${colorFor(currentUser?.uid)}22;color:${colorFor(currentUser?.uid)};flex-shrink:0">${initials(currentUser?.name||'?')}</div>`}
+    <textarea class="c-input" id="ci_${p.id}" placeholder="Написать комментарий..." rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment('${p.id}')}"></textarea>
+    <button class="c-send" onclick="addComment('${p.id}')">↑</button>
+  </div>`;
+  return html;
+}
+
+function renderComment(c, postId, depth=0) {
+  const color = colorFor(c.authorId);
+  const liked = currentUser && c.likes && c.likes.includes(currentUser.uid);
+  const reactions = c.reactions || {};
+  const reactionHTML = Object.entries(reactions).map(([emoji, users]) =>
+    `<span class="c-reaction ${users.includes(currentUser?.uid)?'mine':''}" onclick="reactComment('${postId}','${c.id}','${emoji}')">${emoji}${users.length}</span>`
+  ).join('');
+  const replies = (c.replies || []).map(r => renderComment(r, postId, depth+1)).join('');
+  return `<div class="comment-item">
+    ${c.authorPhoto ? `<img src="${c.authorPhoto}" class="ava" width="28" height="28" style="flex-shrink:0">` : `<div class="ava-text" style="width:28px;height:28px;font-size:11px;background:${color}22;color:${color};flex-shrink:0">${initials(c.authorName)}</div>`}
+    <div class="comment-bubble">
+      <div class="comment-header"><span class="c-author">${c.authorName}</span><span class="c-time">${timeAgo(c.ts)}</span></div>
+      <div class="c-text">${escHtml(c.text)}</div>
+      ${reactionHTML ? `<div class="c-reactions">${reactionHTML}</div>` : ''}
+      <div class="c-actions">
+        <button class="c-act ${liked?'liked':''}" onclick="likeComment('${postId}','${c.id}')">♥ ${(c.likes||[]).length}</button>
+        ${depth<2 ? `<button class="c-act" onclick="toggleReply('${postId}','${c.id}')">↩ Ответить</button>` : ''}
+        <div style="position:relative;display:inline-block;">
+          <button class="c-act" onclick="toggleReactPicker(event,'crp_${c.id}')">☺</button>
+          <div class="reaction-picker" id="crp_${c.id}" style="top:20px;left:0;">
+            ${REACTIONS.map(r=>`<button class="rp-btn" onclick="reactComment('${postId}','${c.id}','${r}');closeReactPicker('crp_${c.id}')">${r}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div id="replyInput_${c.id}" style="display:none;margin-top:6px;">
+        <div class="comment-input-row">
+          <textarea class="c-input" id="ri_${c.id}" placeholder="Ответить ${c.authorName}..." rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitReply('${postId}','${c.id}')}"></textarea>
+          <button class="c-send" onclick="submitReply('${postId}','${c.id}')">↑</button>
+        </div>
+      </div>
+      ${replies ? `<div class="reply-thread">${replies}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function toggleComments(id) {
+  const p = localPosts.find(x=>x.id===id); if(!p) return;
+  p.showComments = !p.showComments;
+  renderFeed(); if(currentChannel?.id === p.channelId) renderChannelPosts();
+}
+
+function likePost(id) {
+  if(!currentUser) return;
+  const p = localPosts.find(x=>x.id===id); if(!p) return;
+  p.likes = p.likes||[];
+  const i = p.likes.indexOf(currentUser.uid);
+  if(i>-1) p.likes.splice(i,1); else p.likes.push(currentUser.uid);
+  saveLocal(); renderFeed(); if(currentChannel) renderChannelPosts();
+}
+
+function likeComment(postId, commentId) {
+  if(!currentUser) return;
+  const p = localPosts.find(x=>x.id===postId); if(!p) return;
+  const c = findComment(p.comments||[], commentId); if(!c) return;
+  c.likes = c.likes||[];
+  const i = c.likes.indexOf(currentUser.uid);
+  if(i>-1) c.likes.splice(i,1); else c.likes.push(currentUser.uid);
+  saveLocal(); renderFeed(); if(currentChannel) renderChannelPosts();
+}
+
+function findComment(comments, id) {
+  for(const c of comments) {
+    if(c.id===id) return c;
+    if(c.replies) { const f=findComment(c.replies,id); if(f) return f; }
+  }
+  return null;
+}
+
+function reactPost(id, emoji) {
+  if(!currentUser) return;
+  const p = localPosts.find(x=>x.id===id); if(!p) return;
+  p.reactions = p.reactions||{};
+  p.reactions[emoji] = p.reactions[emoji]||[];
+  const i = p.reactions[emoji].indexOf(currentUser.uid);
+  if(i>-1) p.reactions[emoji].splice(i,1); else p.reactions[emoji].push(currentUser.uid);
+  if(!p.reactions[emoji].length) delete p.reactions[emoji];
+  saveLocal(); renderFeed(); if(currentChannel) renderChannelPosts();
+}
+
+function reactComment(postId, commentId, emoji) {
+  if(!currentUser) return;
+  const p = localPosts.find(x=>x.id===postId); if(!p) return;
+  const c = findComment(p.comments||[], commentId); if(!c) return;
+  c.reactions = c.reactions||{};
+  c.reactions[emoji] = c.reactions[emoji]||[];
+  const i = c.reactions[emoji].indexOf(currentUser.uid);
+  if(i>-1) c.reactions[emoji].splice(i,1); else c.reactions[emoji].push(currentUser.uid);
+  if(!c.reactions[emoji].length) delete c.reactions[emoji];
+  saveLocal(); renderFeed(); if(currentChannel) renderChannelPosts();
+}
+
+function toggleReply(postId, commentId) {
+  const el = document.getElementById('replyInput_'+commentId);
+  if(el) { el.style.display = el.style.display==='none'?'block':'none'; }
+}
+
+function submitReply(postId, commentId) {
+  const inp = document.getElementById('ri_'+commentId);
+  if(!inp||!inp.value.trim()) return;
+  const p = localPosts.find(x=>x.id===postId); if(!p) return;
+  const c = findComment(p.comments||[], commentId); if(!c) return;
+  c.replies = c.replies||[];
+  c.replies.push({ id:uid(), authorId:currentUser.uid, authorName:currentUser.name, authorPhoto:currentUser.photo||null, text:inp.value.trim(), ts:Date.now(), likes:[], reactions:{} });
+  inp.value='';
+  saveLocal(); renderFeed(); if(currentChannel) renderChannelPosts();
+}
+
+function addComment(postId) {
+  const inp = document.getElementById('ci_'+postId);
+  if(!inp||!inp.value.trim()||!currentUser) return;
+  const p = localPosts.find(x=>x.id===postId); if(!p) return;
+  p.comments = p.comments||[];
+  p.showComments = true;
+  p.comments.push({ id:uid(), authorId:currentUser.uid, authorName:currentUser.name, authorPhoto:currentUser.photo||null, text:inp.value.trim(), ts:Date.now(), likes:[], reactions:{}, replies:[] });
+  inp.value='';
+  saveLocal(); renderFeed(); if(currentChannel) renderChannelPosts();
+}
+
+function deletePost(id) {
+  if(!confirm('Удалить пост?')) return;
+  localPosts = localPosts.filter(p=>p.id!==id);
+  saveLocal(); renderFeed(); if(currentChannel) renderChannelPosts();
+}
+
+// ===== PHOTO =====
+function handleFeedPhoto(e) {
+  const file = e.target.files[0]; if(!file) return;
+  uploadPhoto(file, data => {
+    feedPhotoData = data;
+    document.getElementById('feedImgPreviewImg').src = data;
+    document.getElementById('feedImgPreview').style.display = 'inline-block';
+    document.getElementById('feedPostBtn').disabled = false;
+  });
+}
+
+function clearFeedImg() {
+  feedPhotoData = null;
+  document.getElementById('feedImgPreview').style.display = 'none';
+  document.getElementById('feedImgPreviewImg').src = '';
+  document.getElementById('feedPhotoInput').value = '';
+  if(!document.getElementById('feedPostText').value.trim()) document.getElementById('feedPostBtn').disabled = true;
+}
+
+function uploadPhoto(file, cb) {
+  // Try Firebase Storage first, fallback to base64
+  if(firebaseReady && storage) {
+    const ref = storage.ref('photos/'+uid()+'.jpg');
+    ref.put(file).then(snap => snap.ref.getDownloadURL()).then(url => cb(url)).catch(() => readAsBase64(file, cb));
+  } else {
+    readAsBase64(file, cb);
+  }
+}
+
+function readAsBase64(file, cb) {
+  const reader = new FileReader();
+  reader.onload = e => cb(e.target.result);
+  reader.readAsDataURL(file);
+}
+
+function submitFeedPost() {
+  const text = document.getElementById('feedPostText').value.trim();
+  if(!text && !feedPhotoData) return;
+  const post = {
+    id: uid(), authorId: currentUser.uid, authorName: currentUser.name,
+    authorPhoto: currentUser.photo||null, text, img: feedPhotoData||null,
+    ts: Date.now(), likes:[], comments:[], reactions:{}, showComments:false
+  };
+  localPosts.unshift(post);
+  document.getElementById('feedPostText').value = '';
+  clearFeedImg();
+  document.getElementById('feedPostBtn').disabled = true;
+  saveLocal(); renderFeed();
+  showToast('Пост опубликован!');
+}
+
+// ===== EMOJI =====
+function buildEmojiBar(barId, targetId) {
+  const bar = document.getElementById(barId);
+  if(!bar) return;
+  bar.innerHTML = EMOJIS.map(e=>`<button class="e-btn" onclick="insertEmoji('${targetId}','${e}')">${e}</button>`).join('');
+}
+
+function toggleEmojiPicker(id) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  const show = el.style.display==='none';
+  el.style.display = show?'block':'none';
+  if(show) buildEmojiBar(id+'Bar', id==='feedEmoji'?'feedPostText':'chPostText');
+}
+
+function insertEmoji(targetId, emoji) {
+  const el = document.getElementById(targetId);
+  if(!el) return;
+  const pos = el.selectionStart;
+  el.value = el.value.slice(0,pos)+emoji+el.value.slice(pos);
+  el.selectionStart = el.selectionEnd = pos+emoji.length;
+  el.focus();
+}
+
+function toggleReactPicker(e, id) {
+  e.stopPropagation();
+  document.querySelectorAll('.reaction-picker.show').forEach(p => { if(p.id!==id) p.classList.remove('show'); });
+  document.getElementById(id)?.classList.toggle('show');
+}
+function closeReactPicker(id) { document.getElementById(id)?.classList.remove('show'); }
+document.addEventListener('click', () => document.querySelectorAll('.reaction-picker.show').forEach(p=>p.classList.remove('show')));
+
+// ===== CHANNELS =====
+function renderSidebar() {
+  const mine = localChannels.filter(c => c.ownerId===currentUser?.uid);
+  const el = document.getElementById('myChannelsList');
+  el.innerHTML = mine.map(c=>`<div class="sb-channel ${currentChannel?.id===c.id?'active':''}" onclick="openChannel('${c.id}')">
+    <span class="sb-hash">${c.icon||'#'}</span>
+    <span>${c.name}</span>
+  </div>`).join('') || '<div style="font-size:12px;color:var(--text3);padding:4px 12px;">Нет каналов</div>';
+}
+
+function openCreateChannel() { document.getElementById('createChannelModal').classList.add('show'); }
+
+function createChannel() {
+  const name = document.getElementById('chName').value.trim();
+  const desc = document.getElementById('chDesc').value.trim();
+  const icon = document.getElementById('chIcon').value.trim()||'📢';
+  if(!name) { showToast('Введите название'); return; }
+  const ch = { id:uid(), name, desc, icon, ownerId:currentUser.uid, ownerName:currentUser.name, ts:Date.now(), members:[currentUser.uid] };
+  localChannels.push(ch);
+  saveLocal();
+  closeModal('createChannelModal');
+  document.getElementById('chName').value=''; document.getElementById('chDesc').value=''; document.getElementById('chIcon').value='';
+  renderSidebar();
+  openChannel(ch.id);
+  nav('channels');
+  showToast('Канал создан!');
+}
+
+function openChannel(id) {
+  currentChannel = localChannels.find(c=>c.id===id);
+  if(!currentChannel) return;
+  nav('channels');
+  renderChannelPage();
+  renderSidebar();
+}
+
+function renderChannelPage() {
+  if(!currentChannel) return;
+  const ch = currentChannel;
+  const isOwner = ch.ownerId === currentUser?.uid;
+  const posts = localPosts.filter(p=>p.channelId===ch.id).sort((a,b)=>b.ts-a.ts);
+  document.getElementById('channelContent').innerHTML = `
+    <div class="channel-header">
+      <div class="ch-icon">${ch.icon||'📢'}</div>
+      <div><div class="ch-title">${ch.name}</div><div class="ch-desc">${ch.desc||''}</div></div>
+    </div>
+    <div class="composer" style="margin-bottom:16px;">
+      <div class="composer-top">
+        ${currentUser?.photo?`<img src="${currentUser.photo}" class="ava" width="38" height="38">`:`<div class="ava-text" style="width:38px;height:38px;font-size:15px;background:${colorFor(currentUser?.uid)}22;color:${colorFor(currentUser?.uid)}">${initials(currentUser?.name||'?')}</div>`}
+        <div class="composer-body">
+          <textarea class="composer-textarea" id="chPostText" placeholder="Написать в канал ${ch.name}..." rows="2" oninput="autoResize(this)"></textarea>
+          <div id="chImgPreview" style="display:none;margin-top:8px;position:relative;display:inline-block;display:none;">
+            <img id="chImgPreviewImg" src="" style="max-height:150px;border-radius:8px;">
+            <button class="remove-img" onclick="clearChImg()">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="composer-footer">
+        <input type="file" id="chPhotoInput" accept="image/*" onchange="handleChPhoto(event)">
+        <button class="tool-btn" onclick="document.getElementById('chPhotoInput').click()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button class="tool-btn" onclick="toggleEmojiPicker('chEmoji')">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+        </button>
+        <button class="post-submit" onclick="submitChannelPost()">Опубликовать</button>
+      </div>
+      <div id="chEmoji" style="display:none"><div class="emoji-bar" id="chEmojiBar"></div></div>
+    </div>
+    <div id="chPosts">${posts.length ? posts.map(p=>renderPostCard(p)).join('') : '<div class="empty-state"><div class="icon">✍️</div><p>Пока нет постов в этом канале</p></div>'}</div>`;
+}
+
+function renderChannelPosts() {
+  if(!currentChannel) return;
+  const posts = localPosts.filter(p=>p.channelId===currentChannel.id).sort((a,b)=>b.ts-a.ts);
+  const el = document.getElementById('chPosts');
+  if(el) el.innerHTML = posts.length ? posts.map(p=>renderPostCard(p)).join('') : '<div class="empty-state"><div class="icon">✍️</div><p>Пока нет постов</p></div>';
+}
+
+function handleChPhoto(e) {
+  const file = e.target.files[0]; if(!file) return;
+  uploadPhoto(file, data => {
+    channelPhotoData = data;
+    const wrap = document.getElementById('chImgPreview');
+    document.getElementById('chImgPreviewImg').src = data;
+    wrap.style.display = 'inline-block';
+  });
+}
+
+function clearChImg() {
+  channelPhotoData = null;
+  const wrap = document.getElementById('chImgPreview');
+  if(wrap) wrap.style.display='none';
+  document.getElementById('chPhotoInput').value='';
+}
+
+function submitChannelPost() {
+  if(!currentChannel||!currentUser) return;
+  const text = document.getElementById('chPostText')?.value.trim();
+  if(!text&&!channelPhotoData) { showToast('Напишите что-нибудь'); return; }
+  const post = {
+    id:uid(), authorId:currentUser.uid, authorName:currentUser.name,
+    authorPhoto:currentUser.photo||null, text:text||'', img:channelPhotoData||null,
+    ts:Date.now(), likes:[], comments:[], reactions:{}, showComments:false,
+    channelId:currentChannel.id, channelName:currentChannel.name
+  };
+  localPosts.unshift(post);
+  const inp = document.getElementById('chPostText');
+  if(inp) inp.value='';
+  clearChImg();
+  saveLocal(); renderChannelPage(); renderFeed();
+  showToast('Опубликовано в канал!');
+}
+
+// ===== COMMUNITIES =====
+function renderCommunities() {
+  const el = document.getElementById('commGrid');
+  let html = localCommunities.map(c => {
+    const joined = c.members && c.members.includes(currentUser?.uid);
+    return `<div class="community-card">
+      <div class="comm-cover" style="background:${colorFor(c.id)}22;font-size:40px;">${c.emoji||'🌍'}</div>
+      <div class="comm-body">
+        <div class="comm-name">${c.name}</div>
+        <div class="comm-desc">${c.desc||''}</div>
+        <div class="comm-stats"><span>👥 ${(c.members||[]).length} участников</span></div>
+        <button class="comm-join ${joined?'joined':''}" onclick="toggleJoin('${c.id}')">${joined?'Вы участник':'Вступить'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  html += `<div class="new-comm-btn" onclick="openCreateCommunity()">
+    <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Создать сообщество
+  </div>`;
+  el.innerHTML = html;
+}
+
+function openCreateCommunity() { document.getElementById('createCommunityModal').classList.add('show'); }
+
+function createCommunity() {
+  const name = document.getElementById('commName').value.trim();
+  const desc = document.getElementById('commDesc').value.trim();
+  const emoji = document.getElementById('commEmoji').value.trim()||'🌍';
+  if(!name) { showToast('Введите название'); return; }
+  const c = { id:uid(), name, desc, emoji, ownerId:currentUser.uid, members:[currentUser.uid], ts:Date.now() };
+  localCommunities.push(c);
+  saveLocal();
+  closeModal('createCommunityModal');
+  document.getElementById('commName').value=''; document.getElementById('commDesc').value=''; document.getElementById('commEmoji').value='';
+  renderCommunities();
+  showToast('Сообщество создано!');
+}
+
+function toggleJoin(id) {
+  if(!currentUser) return;
+  const c = localCommunities.find(x=>x.id===id); if(!c) return;
+  c.members = c.members||[];
+  const i = c.members.indexOf(currentUser.uid);
+  if(i>-1) c.members.splice(i,1); else c.members.push(currentUser.uid);
+  saveLocal(); renderCommunities();
+}
+
+// ===== MESSAGES =====
+function renderConvList() {
+  const el = document.getElementById('convList');
+  const convs = Object.keys(localMessages).filter(k => k.startsWith(currentUser?.uid+'_')||k.endsWith('_'+currentUser?.uid));
+  if(!convs.length) { el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text3);">Нет диалогов</div>'; return; }
+  el.innerHTML = convs.map(key => {
+    const msgs = localMessages[key]||[];
+    const last = msgs[msgs.length-1];
+    const otherId = key.replace(currentUser.uid+'_','').replace('_'+currentUser.uid,'');
+    const other = localUsers[otherId] || { name: otherId, photo: null };
+    const color = colorFor(otherId);
+    return `<div class="conv-item ${currentConv===key?'active':''}" onclick="openConv('${key}')">
+      ${other.photo?`<img src="${other.photo}" class="ava" width="38" height="38">`:`<div class="ava-text" style="width:38px;height:38px;font-size:14px;background:${color}22;color:${color}">${initials(other.name)}</div>`}
+      <div class="conv-info">
+        <div class="conv-name">${other.name}</div>
+        <div class="conv-preview">${last?last.text:'Нет сообщений'}</div>
+      </div>
+      <div class="conv-time">${last?timeAgo(last.ts):''}</div>
+    </div>`;
+  }).join('');
+}
+
+function openConv(key) {
+  currentConv = key;
+  const otherId = key.replace(currentUser.uid+'_','').replace('_'+currentUser.uid,'');
+  const other = localUsers[otherId]||{ name:otherId, photo:null };
+  const color = colorFor(otherId);
+  const msgs = localMessages[key]||[];
+  document.getElementById('msgMain').innerHTML = `
+    <div class="msg-chat-header">
+      ${other.photo?`<img src="${other.photo}" class="ava" width="36" height="36">`:`<div class="ava-text" style="width:36px;height:36px;font-size:14px;background:${color}22;color:${color}">${initials(other.name)}</div>`}
+      <div class="name">${other.name}</div>
+    </div>
+    <div class="msg-area" id="msgArea">
+      ${msgs.map(m=>`<div>
+        <div class="msg-bubble ${m.from===currentUser.uid?'out':'in'}">${escHtml(m.text)}</div>
+        <div class="msg-time" style="${m.from===currentUser.uid?'text-align:right':'text-align:left'};color:var(--text3)">${timeAgo(m.ts)}</div>
+      </div>`).join('')}
+    </div>
+    <div class="msg-input-bar">
+      <textarea class="msg-input" id="msgInput" placeholder="Сообщение..." rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+      <button class="msg-send" onclick="sendMessage()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+    </div>`;
+  const area = document.getElementById('msgArea');
+  if(area) area.scrollTop = area.scrollHeight;
+  renderConvList();
+}
+
+function sendMessage() {
+  const inp = document.getElementById('msgInput');
+  if(!inp||!inp.value.trim()||!currentConv) return;
+  localMessages[currentConv] = localMessages[currentConv]||[];
+  localMessages[currentConv].push({ from:currentUser.uid, text:inp.value.trim(), ts:Date.now() });
+  inp.value='';
+  saveLocal();
+  openConv(currentConv);
+  renderConvList();
+  simulateReply(currentConv);
+}
+
+function simulateReply(key) {
+  const otherId = key.replace(currentUser.uid+'_','').replace('_'+currentUser.uid,'');
+  if(!localUsers[otherId]) return;
+  const replies = ['Привет!','Понял 👍','Интересно!','Расскажи подробнее','Окей!','😊','Спасибо!','Хорошо'];
+  setTimeout(() => {
+    localMessages[key].push({ from:otherId, text:replies[Math.floor(Math.random()*replies.length)], ts:Date.now() });
+    saveLocal(); openConv(key); renderConvList();
+  }, 800+Math.random()*1500);
+}
+
+function openNewMsg() { document.getElementById('newMsgModal').classList.add('show'); }
+
+function startNewConv() {
+  const email = document.getElementById('newMsgEmail').value.trim();
+  if(!email) return;
+  const otherId = btoa(email);
+  if(!localUsers[otherId]) { localUsers[otherId]={ uid:otherId, name:email.split('@')[0], email, photo:null }; saveLocal(); }
+  const key = [currentUser.uid, otherId].sort().join('_');
+  localMessages[key] = localMessages[key]||[];
+  saveLocal();
+  closeModal('newMsgModal');
+  nav('messages');
+  openConv(key);
+}
+
+// ===== PROFILE =====
+function renderProfile() {
+  if(!currentUser) return;
+  const pa = document.getElementById('profileBigAva');
+  const pat = document.getElementById('profileBigAvaText');
+  if(currentUser.photo) { pa.src=currentUser.photo; pa.style.display='block'; pat.style.display='none'; }
+  else { pa.style.display='none'; pat.style.display='flex'; pat.textContent=initials(currentUser.name); pat.style.background=colorFor(currentUser.uid)+'22'; pat.style.color=colorFor(currentUser.uid); }
+  document.getElementById('profileName').textContent = currentUser.name;
+  document.getElementById('profileHandle').textContent = '@'+(currentUser.name||'').toLowerCase().replace(/\s/g,'_');
+  document.getElementById('profileBioText').textContent = currentUser.bio||'';
+  const myPosts = localPosts.filter(p=>p.authorId===currentUser.uid);
+  document.getElementById('statPosts').textContent = myPosts.length;
+  document.getElementById('statFollowers').textContent = currentUser.followers||0;
+  document.getElementById('statFollowing').textContent = currentUser.following||0;
+  document.getElementById('profilePosts').innerHTML = myPosts.sort((a,b)=>b.ts-a.ts).map(p=>renderPostCard(p)).join('') || '<div class="empty-state"><div class="icon">📝</div><p>Нет постов</p></div>';
+}
+
+function openEditProfile() {
+  document.getElementById('epName').value = currentUser.name||'';
+  document.getElementById('epBio').value = currentUser.bio||'';
+  document.getElementById('epSite').value = currentUser.site||'';
+  document.getElementById('editProfileModal').classList.add('show');
+}
+
+function saveProfile() {
+  currentUser.name = document.getElementById('epName').value.trim()||currentUser.name;
+  currentUser.bio = document.getElementById('epBio').value.trim();
+  currentUser.site = document.getElementById('epSite').value.trim();
+  localUsers[currentUser.uid] = currentUser;
+  saveLocal();
+  closeModal('editProfileModal');
+  updateTopUser(); renderProfile();
+  showToast('Профиль сохранён!');
+}
+
+// ===== TRENDING =====
+function renderTrending() {
+  const tags = ['#технологии','#музыка','#путешествия','#программирование','#дизайн','#фото'];
+  document.getElementById('trendingList').innerHTML = tags.map(t=>`<div class="trending-item">
+    <div class="trending-tag">${t}</div>
+    <div class="trending-count">${Math.floor(Math.random()*900+100)} постов</div>
+  </div>`).join('');
+}
+
+// ===== SEARCH =====
+function handleSearch(q) {
+  q = q.toLowerCase().trim();
+  if(!q) { renderFeed(); return; }
+  const results = localPosts.filter(p => p.text?.toLowerCase().includes(q)||p.authorName?.toLowerCase().includes(q));
+  const el = document.getElementById('feedPosts');
+  if(!el) return;
+  nav('feed');
+  el.innerHTML = results.length ? results.map(p=>renderPostCard(p)).join('') : `<div class="empty-state"><div class="icon">🔍</div><p>Ничего не найдено по «${q}»</p></div>`;
+}
+
+// ===== MODAL HELPERS =====
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('show'); }));
+</script>
+</body>
+</html>
